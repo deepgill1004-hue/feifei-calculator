@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>菲菲複利懶人試算表</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Noto+Sans+TC:wght@300;400;500;700&display=swap');
+
+:root {
+  --rose: #e07b6a;
+  --rose-light: #f2a898;
+  --rose-pale: #fde8e3;
+  --cream: #fdf8f3;
+  --warm: #f9f1e8;
+  --gold: #c8933a;
+  --gold-light: #e8b96a;
+  --sage: #7a9e8a;
+  --sage-light: #a8c4b0;
+  --dark: #1e1208;
+  --mid: #5c3d2a;
+  --light: #a07858;
+  --border: rgba(200,147,58,0.15);
+  --shadow: rgba(30,18,8,0.08);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: 'Noto Sans TC', sans-serif;
+  background: var(--cream);
+  color: var(--dark);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── BACKGROUND ── */
+body::before {
+  content:'';
+  position:fixed; inset:0; z-index:0; pointer-events:none;
+  background:
+    radial-gradient(ellipse 70% 50% at 10% 0%, rgba(224,123,106,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 70% at 90% 100%, rgba(200,147,58,0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 40% at 80% 20%, rgba(122,158,138,0.05) 0%, transparent 50%);
+}
+
+.wrap { max-width:1100px; margin:0 auto; padding:0 24px; position:relative; z-index:1; }
+
+/* ── HEADER ── */
+header {
+  text-align:center;
+  padding: 56px 24px 48px;
+}
+.header-tag {
+  display:inline-flex; align-items:center; gap:6px;
+  background:rgba(224,123,106,0.1); border:1px solid rgba(224,123,106,0.25);
+  border-radius:100px; padding:5px 16px;
+  font-size:11px; font-weight:500; letter-spacing:0.1em;
+  color:var(--rose); margin-bottom:18px; text-transform:uppercase;
+}
+header h1 {
+  font-family:'Playfair Display', serif;
+  font-size:clamp(2rem,5vw,3.2rem);
+  color:var(--dark); line-height:1.15; margin-bottom:12px;
+}
+header h1 em { font-style:italic; color:var(--rose); }
+header p { color:var(--light); font-size:15px; font-weight:300; }
+
+/* ── TAB NAV ── */
+.tab-nav {
+  display:flex; gap:6px; justify-content:center;
+  margin-bottom:40px; flex-wrap:wrap;
+}
+.tab-btn {
+  padding:10px 22px; border-radius:100px;
+  border:1px solid var(--border);
+  background:white; color:var(--mid);
+  font-family:'Noto Sans TC',sans-serif;
+  font-size:13px; cursor:pointer;
+  transition:all 0.25s; font-weight:400;
+  display:flex; align-items:center; gap:6px;
+}
+.tab-btn:hover { border-color:var(--rose); color:var(--rose); }
+.tab-btn.active {
+  background:var(--rose); color:white;
+  border-color:var(--rose);
+  box-shadow:0 4px 18px rgba(224,123,106,0.35);
+}
+
+/* ── PANELS ── */
+.panel { display:none; }
+.panel.active { display:block; }
+
+/* ── CARD ── */
+.card {
+  background:white; border:1px solid var(--border);
+  border-radius:24px; padding:32px 36px;
+  box-shadow:0 2px 24px var(--shadow);
+  margin-bottom:20px;
+}
+@media(max-width:600px){ .card{ padding:22px 18px; } }
+
+.card-label {
+  font-size:11px; font-weight:600; letter-spacing:0.12em;
+  color:var(--gold); text-transform:uppercase; margin-bottom:8px;
+}
+.card-title {
+  font-family:'Playfair Display',serif;
+  font-size:1.35rem; color:var(--dark);
+  margin-bottom:6px; line-height:1.3;
+}
+.card-sub { font-size:13px; color:var(--light); font-weight:300; margin-bottom:28px; }
+
+/* ── INPUT GRID ── */
+.input-grid {
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+  gap:18px; margin-bottom:28px;
+}
+.field { display:flex; flex-direction:column; gap:6px; }
+.field label {
+  font-size:12px; font-weight:500; color:var(--mid);
+  letter-spacing:0.04em;
+}
+.field-inner {
+  display:flex; align-items:center;
+  background:var(--warm); border:1.5px solid var(--border);
+  border-radius:14px; padding:0 16px; gap:8px;
+  transition:border-color 0.2s;
+}
+.field-inner:focus-within { border-color:var(--rose); background:white; }
+.field-inner span { font-size:13px; color:var(--light); white-space:nowrap; }
+.field-inner input {
+  border:none; background:transparent;
+  font-family:'Noto Sans TC',sans-serif;
+  font-size:16px; font-weight:500; color:var(--dark);
+  padding:13px 0; width:100%; outline:none;
+}
+.field-inner input::-webkit-inner-spin-button { -webkit-appearance:none; }
+
+/* ── SLIDER ── */
+.slider-row { display:flex; align-items:center; gap:12px; margin-top:4px; }
+.slider-row input[type=range] {
+  flex:1; -webkit-appearance:none; height:4px;
+  background:linear-gradient(90deg, var(--rose) var(--pct,50%), var(--border) var(--pct,50%));
+  border-radius:4px; outline:none; cursor:pointer;
+}
+.slider-row input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance:none; width:18px; height:18px;
+  border-radius:50%; background:var(--rose);
+  box-shadow:0 2px 8px rgba(224,123,106,0.4); cursor:pointer;
+  border:3px solid white;
+}
+.slider-val {
+  min-width:52px; text-align:right;
+  font-size:15px; font-weight:700; color:var(--rose);
+}
+
+/* ── CALC BUTTON ── */
+.btn-calc {
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  width:100%; padding:16px;
+  background:linear-gradient(135deg, var(--rose) 0%, #c8624e 100%);
+  color:white; border:none; border-radius:16px;
+  font-family:'Noto Sans TC',sans-serif;
+  font-size:15px; font-weight:500; cursor:pointer;
+  box-shadow:0 6px 24px rgba(224,123,106,0.35);
+  transition:all 0.3s; letter-spacing:0.04em;
+}
+.btn-calc:hover { transform:translateY(-2px); box-shadow:0 10px 32px rgba(224,123,106,0.45); }
+.btn-calc:active { transform:translateY(0); }
+
+/* ── RESULTS ── */
+.results { margin-top:28px; display:none; }
+.results.show { display:block; animation:fadeUp 0.4s ease; }
+
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(16px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+.result-hero {
+  background:linear-gradient(135deg, var(--rose) 0%, #b85a48 100%);
+  border-radius:20px; padding:28px 32px;
+  display:grid; grid-template-columns:1fr 1fr 1fr;
+  gap:20px; margin-bottom:20px; position:relative; overflow:hidden;
+}
+.result-hero::after {
+  content:'✦'; position:absolute; right:24px; top:50%;
+  transform:translateY(-50%); font-size:80px; opacity:0.08; color:white;
+  pointer-events:none;
+}
+@media(max-width:600px){ .result-hero{ grid-template-columns:1fr 1fr; } }
+
+.hero-stat { color:white; }
+.hero-stat .lbl {
+  font-size:11px; opacity:0.75; letter-spacing:0.08em;
+  text-transform:uppercase; margin-bottom:6px; font-weight:500;
+}
+.hero-stat .val {
+  font-family:'Playfair Display',serif;
+  font-size:clamp(1.4rem,3vw,2rem); font-weight:700; line-height:1.1;
+}
+.hero-stat .val.big {
+  font-size:clamp(1.8rem,4vw,2.6rem); color:#ffd9a0;
+}
+.hero-stat .sub { font-size:12px; opacity:0.7; margin-top:4px; }
+
+/* ── STAT CARDS ── */
+.stat-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin-bottom:20px; }
+.stat-card {
+  background:var(--warm); border:1px solid var(--border);
+  border-radius:16px; padding:18px 20px;
+}
+.stat-card .lbl { font-size:11px; color:var(--light); font-weight:500; letter-spacing:0.06em; text-transform:uppercase; margin-bottom:8px; }
+.stat-card .val { font-size:1.4rem; font-weight:700; color:var(--dark); font-family:'Playfair Display',serif; }
+.stat-card .val.green { color:var(--sage); }
+.stat-card .val.gold { color:var(--gold); }
+.stat-card .note { font-size:12px; color:var(--light); margin-top:4px; }
+
+/* ── COMPARISON BAR ── */
+.compare-section { margin-bottom:20px; }
+.compare-title { font-size:13px; font-weight:600; color:var(--mid); margin-bottom:14px; letter-spacing:0.04em; }
+.compare-bar-wrap { margin-bottom:12px; }
+.compare-label { display:flex; justify-content:space-between; font-size:12px; color:var(--light); margin-bottom:5px; }
+.bar-outer { height:10px; background:var(--border); border-radius:10px; overflow:hidden; }
+.bar-inner { height:100%; border-radius:10px; transition:width 1s cubic-bezier(.16,1,.3,1); }
+.bar-rose { background:linear-gradient(90deg,var(--rose),var(--rose-light)); }
+.bar-gold { background:linear-gradient(90deg,var(--gold),var(--gold-light)); }
+.bar-sage { background:linear-gradient(90deg,var(--sage),var(--sage-light)); }
+.bar-gray { background:linear-gradient(90deg,#ccc,#e0e0e0); }
+
+/* ── YEARLY TABLE ── */
+.table-wrap { overflow-x:auto; border-radius:16px; border:1px solid var(--border); }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+thead tr { background:var(--rose); color:white; }
+thead th { padding:12px 16px; text-align:right; font-weight:500; font-size:12px; letter-spacing:0.04em; }
+thead th:first-child { text-align:left; }
+tbody tr { border-bottom:1px solid var(--border); transition:background 0.15s; }
+tbody tr:hover { background:var(--rose-pale); }
+tbody tr:last-child { border:none; }
+tbody td { padding:11px 16px; text-align:right; color:var(--mid); }
+tbody td:first-child { text-align:left; color:var(--dark); font-weight:500; }
+.td-highlight { color:var(--rose); font-weight:700; }
+.td-gold { color:var(--gold); font-weight:600; }
+
+/* ── MILESTONE BADGE ── */
+.milestone { 
+  display:inline-flex; align-items:center; gap:4px;
+  background:rgba(200,147,58,0.12); border:1px solid rgba(200,147,58,0.25);
+  border-radius:100px; padding:2px 10px;
+  font-size:11px; color:var(--gold); font-weight:600;
+  margin-left:6px;
+}
+
+/* ── COST PANEL ── */
+.cost-result {
+  background:var(--warm); border:1px solid var(--border);
+  border-radius:16px; padding:22px 24px; margin-bottom:14px;
+}
+.cost-row { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); }
+.cost-row:last-child { border:none; padding-bottom:0; }
+.cost-row .name { font-size:14px; color:var(--mid); }
+.cost-row .amount { font-size:15px; font-weight:700; color:var(--dark); }
+.cost-row .amount.red { color:#d64545; }
+.cost-row .amount.green { color:var(--sage); }
+.cost-total { display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding-top:16px; border-top:2px solid var(--rose); }
+.cost-total .name { font-size:15px; font-weight:600; color:var(--dark); }
+.cost-total .amount { font-size:1.4rem; font-weight:700; color:var(--rose); font-family:'Playfair Display',serif; }
+
+/* ── TAX PANEL ── */
+.tax-verdict {
+  border-radius:16px; padding:22px 28px; text-align:center; margin-top:20px;
+}
+.tax-verdict.a { background:linear-gradient(135deg,rgba(122,158,138,0.12),rgba(122,158,138,0.05)); border:1.5px solid rgba(122,158,138,0.3); }
+.tax-verdict.b { background:linear-gradient(135deg,rgba(200,147,58,0.12),rgba(200,147,58,0.05)); border:1.5px solid rgba(200,147,58,0.3); }
+.tax-verdict .icon { font-size:32px; margin-bottom:8px; }
+.tax-verdict .title { font-size:1.1rem; font-weight:700; color:var(--dark); margin-bottom:4px; }
+.tax-verdict .save { font-size:2rem; font-family:'Playfair Display',serif; font-weight:700; color:var(--sage); }
+.tax-verdict .desc { font-size:13px; color:var(--light); margin-top:6px; }
+
+/* ── FOOTER ── */
+footer { text-align:center; padding:48px 24px 32px; color:var(--light); font-size:12px; font-weight:300; letter-spacing:0.05em; }
+
+/* ── CHART ── */
+.chart-wrap { position:relative; height:220px; margin:20px 0 8px; }
+canvas { width:100%!important; }
+
+/* number formatting */
+.num { font-variant-numeric:tabular-nums; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-tag">✦ 菲菲複利懶人試算</div>
+    <h1>你的錢，<em>值多少</em>？</h1>
+    <p>填入參數，秒看複利威力 · 成本侵蝕 · 節稅建議</p>
+  </header>
+
+  <!-- TABS -->
+  <div class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab('compound',this)">🌱 複利試算</button>
+    <button class="tab-btn" onclick="switchTab('compare',this)">⏱️ 早開始 vs 晚開始</button>
+    <button class="tab-btn" onclick="switchTab('cost',this)">💸 成本侵蝕</button>
+    <button class="tab-btn" onclick="switchTab('tax',this)">🧾 股利節稅</button>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       PANEL 1：複利試算
+  ══════════════════════════════════════ -->
+  <div class="panel active" id="panel-compound">
+    <div class="card">
+      <div class="card-label">複利試算</div>
+      <div class="card-title">每個月存多少，最後有多少？</div>
+      <div class="card-sub">填入你的狀況，自動算出30年後的帳戶數字</div>
+
+      <div class="input-grid">
+        <div class="field">
+          <label>現在年齡</label>
+          <div class="field-inner">
+            <input type="number" id="c-age" value="30" min="18" max="60" oninput="calcCompound()">
+            <span>歲</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>目標年齡</label>
+          <div class="field-inner">
+            <input type="number" id="c-target" value="65" min="30" max="80" oninput="calcCompound()">
+            <span>歲</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>每月投入金額</label>
+          <div class="field-inner">
+            <span>NT$</span>
+            <input type="number" id="c-monthly" value="6000" min="1000" step="1000" oninput="calcCompound()">
+          </div>
+        </div>
+        <div class="field">
+          <label>目前已有本金</label>
+          <div class="field-inner">
+            <span>NT$</span>
+            <input type="number" id="c-principal" value="50000" min="0" step="10000" oninput="calcCompound()">
+          </div>
+        </div>
+      </div>
+
+      <div class="field" style="margin-bottom:28px">
+        <label>預估年化報酬率</label>
+        <div class="slider-row">
+          <input type="range" id="c-rate" min="2" max="12" step="0.5" value="7"
+            oninput="updateSlider(this,'c-rate-val'); calcCompound()">
+          <span class="slider-val" id="c-rate-val">7%</span>
+        </div>
+      </div>
+
+      <!-- RESULTS -->
+      <div class="results show" id="r-compound">
+
+        <div class="result-hero" id="hero-compound">
+          <div class="hero-stat">
+            <div class="lbl">預估最終資產</div>
+            <div class="val big num" id="r-total">—</div>
+            <div class="sub">含複利增長</div>
+          </div>
+          <div class="hero-stat">
+            <div class="lbl">總投入本金</div>
+            <div class="val num" id="r-principal">—</div>
+          </div>
+          <div class="hero-stat">
+            <div class="lbl">複利幫你賺</div>
+            <div class="val num" id="r-growth">—</div>
+            <div class="sub" id="r-multiple">—</div>
+          </div>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="lbl">投資年數</div>
+            <div class="val" id="r-years">—</div>
+            <div class="note">年</div>
+          </div>
+          <div class="stat-card">
+            <div class="lbl">每月被動收入（4%法則）</div>
+            <div class="val green num" id="r-passive">—</div>
+            <div class="note">退休後每月可提領</div>
+          </div>
+          <div class="stat-card">
+            <div class="lbl">複利佔總資產</div>
+            <div class="val gold" id="r-ratio">—</div>
+            <div class="note">時間替你工作的比例</div>
+          </div>
+        </div>
+
+        <!-- 逐年成長圖 -->
+        <div class="card" style="padding:24px 28px; margin-bottom:0">
+          <div class="card-label">逐年成長</div>
+          <div class="chart-wrap">
+            <canvas id="growthChart"></canvas>
+          </div>
+          <div class="table-wrap" style="margin-top:16px">
+            <table id="yearly-table">
+              <thead>
+                <tr>
+                  <th style="text-align:left">年份</th>
+                  <th>年齡</th>
+                  <th>累積本金</th>
+                  <th>帳戶總值</th>
+                  <th>複利增長</th>
+                  <th>複利佔比</th>
+                </tr>
+              </thead>
+              <tbody id="yearly-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       PANEL 2：早 vs 晚
+  ══════════════════════════════════════ -->
+  <div class="panel" id="panel-compare">
+    <div class="card">
+      <div class="card-label">時間的代價</div>
+      <div class="card-title">早開始 vs 晚開始，差多少？</div>
+      <div class="card-sub">同樣每個月存一樣的錢，差10年的結果讓你沉默</div>
+
+      <div class="input-grid">
+        <div class="field">
+          <label>每月投入金額</label>
+          <div class="field-inner"><span>NT$</span>
+            <input type="number" id="v-monthly" value="6000" step="1000" oninput="calcCompare()">
+          </div>
+        </div>
+        <div class="field">
+          <label>目標年齡</label>
+          <div class="field-inner">
+            <input type="number" id="v-target" value="65" oninput="calcCompare()">
+            <span>歲</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>年化報酬率</label>
+          <div class="field-inner">
+            <input type="number" id="v-rate" value="7" min="1" max="15" step="0.5" oninput="calcCompare()">
+            <span>%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="results show" id="r-compare">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:20px">
+          <div class="stat-card" style="border-color:rgba(224,123,106,0.3)">
+            <div class="lbl">🌱 25歲開始</div>
+            <div class="val big num" style="color:var(--rose); font-family:'Playfair Display',serif; font-size:1.6rem" id="v-25">—</div>
+            <div class="note" id="v-25-years">—</div>
+          </div>
+          <div class="stat-card" style="border-color:rgba(200,147,58,0.3)">
+            <div class="lbl">⏰ 35歲開始</div>
+            <div class="val big num" style="color:var(--gold); font-family:'Playfair Display',serif; font-size:1.6rem" id="v-35">—</div>
+            <div class="note" id="v-35-years">—</div>
+          </div>
+        </div>
+
+        <div class="cost-result">
+          <div class="cost-row">
+            <span class="name">早10年開始，多賺了</span>
+            <span class="amount green num" id="v-diff">—</span>
+          </div>
+          <div class="cost-row">
+            <span class="name">晚10年要追上，每月需多投</span>
+            <span class="amount red num" id="v-extra">—</span>
+          </div>
+          <div class="cost-row" style="border:none">
+            <span class="name">等於多出幾倍的努力</span>
+            <span class="amount red" id="v-times">—</span>
+          </div>
+        </div>
+
+        <div class="compare-section">
+          <div class="compare-title">各年齡起點到65歲的最終資產對比</div>
+          <div id="age-bars"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       PANEL 3：成本侵蝕
+  ══════════════════════════════════════ -->
+  <div class="panel" id="panel-cost">
+    <div class="card">
+      <div class="card-label">成本侵蝕</div>
+      <div class="card-title">你以為在存股，其實在燒錢</div>
+      <div class="card-sub">把你的交易習慣填進來，看看一年到底漏掉多少</div>
+
+      <div class="input-grid">
+        <div class="field">
+          <label>每月平均買賣次數（來回）</label>
+          <div class="field-inner">
+            <input type="number" id="t-trades" value="4" min="0" max="50" oninput="calcCost()">
+            <span>次</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>每次平均成交金額</label>
+          <div class="field-inner"><span>NT$</span>
+            <input type="number" id="t-amount" value="50000" step="10000" oninput="calcCost()">
+          </div>
+        </div>
+        <div class="field">
+          <label>手續費折扣後費率</label>
+          <div class="field-inner">
+            <input type="number" id="t-fee" value="0.07" min="0.03" max="0.1425" step="0.005" oninput="calcCost()">
+            <span>%</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>持有ETF規模</label>
+          <div class="field-inner"><span>NT$</span>
+            <input type="number" id="t-etf" value="500000" step="50000" oninput="calcCost()">
+          </div>
+        </div>
+        <div class="field">
+          <label>ETF年度費用率</label>
+          <div class="field-inner">
+            <input type="number" id="t-etffee" value="0.3" min="0.03" max="2" step="0.05" oninput="calcCost()">
+            <span>%</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>年度股利收入</label>
+          <div class="field-inner"><span>NT$</span>
+            <input type="number" id="t-dividend" value="30000" step="5000" oninput="calcCost()">
+          </div>
+        </div>
+      </div>
+
+      <div class="results show" id="r-cost">
+        <div class="cost-result">
+          <div class="cost-row">
+            <span class="name">📋 年度手續費（買進）</span>
+            <span class="amount red num" id="tc-fee-buy">—</span>
+          </div>
+          <div class="cost-row">
+            <span class="name">📋 年度手續費（賣出）</span>
+            <span class="amount red num" id="tc-fee-sell">—</span>
+          </div>
+          <div class="cost-row">
+            <span class="name">🏛️ 年度證券交易稅（ETF 0.1%）</span>
+            <span class="amount red num" id="tc-tax">—</span>
+          </div>
+          <div class="cost-row">
+            <span class="name">📊 ETF年度內扣費用</span>
+            <span class="amount red num" id="tc-etf">—</span>
+          </div>
+          <div class="cost-row">
+            <span class="name">🏥 股利二代健保補充費（2.11%）</span>
+            <span class="amount red num" id="tc-health">—</span>
+          </div>
+        </div>
+        <div class="cost-total">
+          <span class="name">💀 一年總成本</span>
+          <span class="amount num" id="tc-total">—</span>
+        </div>
+
+        <div class="stat-grid" style="margin-top:20px">
+          <div class="stat-card">
+            <div class="lbl">這筆錢投資30年後</div>
+            <div class="val red num" id="tc-opp">—</div>
+            <div class="note">機會成本（年化7%）</div>
+          </div>
+          <div class="stat-card">
+            <div class="lbl">若降低交易頻率（每月1次）</div>
+            <div class="val green num" id="tc-save">—</div>
+            <div class="note">每年可省下</div>
+          </div>
+        </div>
+
+        <!-- ETF費用率比較 -->
+        <div class="card" style="margin-top:20px; margin-bottom:0; padding:24px 28px">
+          <div class="card-label">ETF費用率對比</div>
+          <div class="card-sub" style="margin-bottom:20px">同樣每月投入 <span id="etf-monthly-ref">—</span>，30年後差多少？</div>
+          <div id="etf-bars"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       PANEL 4：節稅試算
+  ══════════════════════════════════════ -->
+  <div class="panel" id="panel-tax">
+    <div class="card">
+      <div class="card-label">股利節稅試算</div>
+      <div class="card-title">合併計稅 vs 分離課稅，你選對了嗎？</div>
+      <div class="card-sub">每年報稅前花10分鐘算一下，可能省好幾萬</div>
+
+      <div class="input-grid">
+        <div class="field">
+          <label>年度股利總收入</label>
+          <div class="field-inner"><span>NT$</span>
+            <input type="number" id="x-dividend" value="120000" step="10000" oninput="calcTax()">
+          </div>
+        </div>
+        <div class="field">
+          <label>其他年度綜合所得（薪資等）</label>
+          <div class="field-inner"><span>NT$</span>
+            <input type="number" id="x-income" value="600000" step="50000" oninput="calcTax()">
+          </div>
+        </div>
+        <div class="field">
+          <label>免稅額＋扣除額（預估）</label>
+          <div class="field-inner"><span>NT$</span>
+            <input type="number" id="x-deduct" value="250000" step="10000" oninput="calcTax()">
+          </div>
+        </div>
+      </div>
+
+      <div class="results show" id="r-tax">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:20px">
+          <!-- 方案A -->
+          <div class="cost-result">
+            <div style="font-size:13px; font-weight:600; color:var(--mid); margin-bottom:14px; display:flex; align-items:center; gap:6px;">
+              <span style="background:var(--sage); color:white; border-radius:6px; padding:2px 8px; font-size:11px;">方案A</span>
+              合併計稅
+            </div>
+            <div class="cost-row">
+              <span class="name" style="font-size:12px">合計所得</span>
+              <span class="amount num" style="font-size:13px" id="xa-income">—</span>
+            </div>
+            <div class="cost-row">
+              <span class="name" style="font-size:12px">課稅所得</span>
+              <span class="amount num" style="font-size:13px" id="xa-taxable">—</span>
+            </div>
+            <div class="cost-row">
+              <span class="name" style="font-size:12px">應繳所得稅</span>
+              <span class="amount red num" style="font-size:13px" id="xa-tax">—</span>
+            </div>
+            <div class="cost-row">
+              <span class="name" style="font-size:12px">股利抵減（8.5%，上限8萬）</span>
+              <span class="amount green num" style="font-size:13px" id="xa-credit">—</span>
+            </div>
+            <div class="cost-total" style="margin-top:12px; padding-top:12px">
+              <span style="font-size:13px; font-weight:600">實際應繳稅</span>
+              <span style="font-size:1.3rem; font-weight:700; color:var(--sage); font-family:'Playfair Display',serif" id="xa-final">—</span>
+            </div>
+          </div>
+          <!-- 方案B -->
+          <div class="cost-result">
+            <div style="font-size:13px; font-weight:600; color:var(--mid); margin-bottom:14px; display:flex; align-items:center; gap:6px;">
+              <span style="background:var(--gold); color:white; border-radius:6px; padding:2px 8px; font-size:11px;">方案B</span>
+              分離課稅28%
+            </div>
+            <div class="cost-row">
+              <span class="name" style="font-size:12px">股利單獨課稅</span>
+              <span class="amount num" style="font-size:13px" id="xb-div-tax">—</span>
+            </div>
+            <div class="cost-row">
+              <span class="name" style="font-size:12px">其他所得課稅所得</span>
+              <span class="amount num" style="font-size:13px" id="xb-other-taxable">—</span>
+            </div>
+            <div class="cost-row">
+              <span class="name" style="font-size:12px">其他所得應繳稅</span>
+              <span class="amount red num" style="font-size:13px" id="xb-other-tax">—</span>
+            </div>
+            <div class="cost-row" style="border:none">
+              <span></span><span></span>
+            </div>
+            <div class="cost-total" style="margin-top:12px; padding-top:12px">
+              <span style="font-size:13px; font-weight:600">實際應繳稅</span>
+              <span style="font-size:1.3rem; font-weight:700; color:var(--gold); font-family:'Playfair Display',serif" id="xb-final">—</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 健保補充費 -->
+        <div class="cost-result" style="margin-bottom:20px">
+          <div class="cost-row">
+            <span class="name">二代健保補充費（2.11%）</span>
+            <span class="amount red num" id="x-health">—</span>
+          </div>
+          <div class="cost-row" style="border:none">
+            <span class="name" style="font-size:12px; color:var(--light)">💡 單筆股利低於2萬免收，可透過分散持股降低負擔</span>
+            <span></span>
+          </div>
+        </div>
+
+        <!-- 建議 -->
+        <div class="tax-verdict" id="tax-verdict">
+          <div class="icon" id="tv-icon">🌸</div>
+          <div class="title" id="tv-title">—</div>
+          <div class="save num" id="tv-save">—</div>
+          <div class="desc" id="tv-desc">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /wrap -->
+
+<footer>菲菲複利懶人試算表 · 僅供參考，不構成投資建議 ✦</footer>
+
+<!-- Chart.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+
+// ── UTILS ──
+const fmt = n => 'NT$' + Math.round(n).toLocaleString('zh-TW');
+const fmtShort = n => {
+  if(n>=1e8) return (n/1e8).toFixed(1)+'億';
+  if(n>=1e4) return Math.round(n/10000)+'萬';
+  return Math.round(n).toLocaleString();
+};
+const fmtFull = n => 'NT$' + fmtShort(n);
+const pct = n => (n*100).toFixed(1)+'%';
+const set = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+
+// slider
+function updateSlider(el, valId) {
+  const min=+el.min, max=+el.max, val=+el.value;
+  const p = (val-min)/(max-min)*100;
+  el.style.setProperty('--pct', p+'%');
+  set(valId, val+'%');
+}
+document.querySelectorAll('input[type=range]').forEach(el => {
+  const valId = el.id+'-val';
+  updateSlider(el, valId);
+});
+
+// ── TABS ──
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('panel-'+name).classList.add('active');
+  if(name==='compare') calcCompare();
+  if(name==='cost') calcCost();
+  if(name==='tax') calcTax();
+}
+
+// ── COMPOUND INTEREST FORMULA ──
+// FV = PV*(1+r)^n + PMT * [((1+r)^n - 1) / r]  (annual compounding, monthly PMT converted)
+function calcFV(pv, monthlyPMT, annualRate, years) {
+  if(years<=0) return pv;
+  const r = annualRate/100;
+  const annualPMT = monthlyPMT * 12;
+  if(r===0) return pv + annualPMT*years;
+  return pv*Math.pow(1+r,years) + annualPMT * (Math.pow(1+r,years)-1)/r;
+}
+
+// ── CHART ──
+let growthChartInst = null;
+function drawGrowthChart(labels, principalData, totalData) {
+  const ctx = document.getElementById('growthChart').getContext('2d');
+  if(growthChartInst) growthChartInst.destroy();
+  growthChartInst = new Chart(ctx, {
+    type:'line',
+    data:{
+      labels,
+      datasets:[
+        {
+          label:'帳戶總值',
+          data:totalData,
+          borderColor:'#e07b6a',
+          backgroundColor:'rgba(224,123,106,0.08)',
+          borderWidth:2.5,
+          fill:true,
+          tension:0.4,
+          pointRadius:0,
+          pointHoverRadius:5,
+        },
+        {
+          label:'累積本金',
+          data:principalData,
+          borderColor:'#c8933a',
+          backgroundColor:'rgba(200,147,58,0.06)',
+          borderWidth:2,
+          fill:true,
+          tension:0.4,
+          pointRadius:0,
+          pointHoverRadius:5,
+          borderDash:[5,4],
+        }
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{
+          position:'top',
+          labels:{ font:{family:'Noto Sans TC',size:12}, color:'#5c3d2a', boxWidth:16 }
+        },
+        tooltip:{
+          callbacks:{
+            label: ctx => ' ' + ctx.dataset.label + ': NT$' + Math.round(ctx.raw).toLocaleString()
+          }
+        }
+      },
+      scales:{
+        x:{ grid:{color:'rgba(200,147,58,0.08)'}, ticks:{font:{size:11}, color:'#a07858', maxTicksLimit:8} },
+        y:{ grid:{color:'rgba(200,147,58,0.08)'}, ticks:{
+          font:{size:11}, color:'#a07858',
+          callback: v => v>=1e8?(v/1e8).toFixed(0)+'億':v>=1e4?(v/1e4).toFixed(0)+'萬':v
+        }}
+      }
+    }
+  });
+}
+
+// ── PANEL 1: COMPOUND ──
+function calcCompound() {
+  const age    = +document.getElementById('c-age').value    || 30;
+  const target = +document.getElementById('c-target').value || 65;
+  const monthly= +document.getElementById('c-monthly').value|| 6000;
+  const pv     = +document.getElementById('c-principal').value|| 0;
+  const rate   = +document.getElementById('c-rate').value   || 7;
+  const years  = Math.max(1, target - age);
+
+  const total     = calcFV(pv, monthly, rate, years);
+  const principal = monthly*12*years + pv;
+  const growth    = total - principal;
+  const multiple  = total/principal;
+  const passive   = total*0.04/12;
+  const ratio     = growth/total;
+
+  set('r-total',    fmtFull(total));
+  set('r-principal',fmtFull(principal));
+  set('r-growth',   fmtFull(growth));
+  set('r-multiple', `本金的 ${multiple.toFixed(1)} 倍`);
+  set('r-years',    years);
+  set('r-passive',  fmt(passive)+' / 月');
+  set('r-ratio',    (ratio*100).toFixed(1)+'%');
+
+  // yearly table
+  const tbody = document.getElementById('yearly-body');
+  tbody.innerHTML='';
+  const labels=[], principalArr=[], totalArr=[];
+  const milestones=[100,300,500,1000,2000,5000].map(m=>m*10000);
+  let milestoneReached={};
+
+  for(let y=1; y<=years; y++) {
+    const yTotal = calcFV(pv, monthly, rate, y);
+    const yPrincipal = monthly*12*y + pv;
+    const yGrowth = yTotal - yPrincipal;
+    const yRatio = yGrowth/yTotal;
+
+    // milestone check
+    let badge='';
+    for(const m of milestones) {
+      if(!milestoneReached[m] && yTotal>=m) {
+        milestoneReached[m]=true;
+        badge=`<span class="milestone">🎯 ${fmtShort(m)}</span>`;
+      }
+    }
+
+    if(y%5===0 || y===1 || y===years) {
+      const tr=document.createElement('tr');
+      tr.innerHTML=`
+        <td>第 ${y} 年 ${badge}</td>
+        <td>${age+y} 歲</td>
+        <td class="num">${fmtFull(yPrincipal)}</td>
+        <td class="num td-highlight">${fmtFull(yTotal)}</td>
+        <td class="num td-gold">${fmtFull(yGrowth)}</td>
+        <td>${(yRatio*100).toFixed(0)}%</td>
+      `;
+      tbody.appendChild(tr);
+    }
+    labels.push(`第${y}年`);
+    principalArr.push(yPrincipal);
+    totalArr.push(yTotal);
+  }
+
+  drawGrowthChart(labels, principalArr, totalArr);
+}
+
+// ── PANEL 2: COMPARE ──
+function calcCompare() {
+  const monthly = +document.getElementById('v-monthly').value || 6000;
+  const target  = +document.getElementById('v-target').value  || 65;
+  const rate    = +document.getElementById('v-rate').value    || 7;
+
+  const ages=[25,30,35,40,45];
+  const results=ages.map(a=>({age:a, years:Math.max(0,target-a), val:calcFV(0,monthly,rate,Math.max(0,target-a))}));
+
+  const r25 = results.find(r=>r.age===25).val;
+  const r35 = results.find(r=>r.age===35).val;
+
+  set('v-25', fmtFull(r25));
+  set('v-35', fmtFull(r35));
+  set('v-25-years', `投資 ${target-25} 年`);
+  set('v-35-years', `投資 ${target-35} 年`);
+  set('v-diff', fmtFull(r25-r35));
+
+  // reverse: how much monthly to match r25 from 35
+  const yr35 = target-35;
+  const r_extra = rate/100;
+  const extraMonthly = r_extra===0 ? r25/(yr35*12) : r25 / (12 * (Math.pow(1+r_extra,yr35)-1)/r_extra);
+  set('v-extra', fmt(extraMonthly)+' / 月');
+  set('v-times', (extraMonthly/monthly).toFixed(1)+' 倍');
+
+  // bars
+  const maxVal = results[0].val;
+  const barContainer = document.getElementById('age-bars');
+  barContainer.innerHTML='';
+  const colors=['bar-rose','bar-gold','bar-sage','bar-gray','bar-gray'];
+  results.forEach((r,i)=>{
+    const w = (r.val/maxVal*100).toFixed(1);
+    barContainer.innerHTML+=`
+      <div class="compare-bar-wrap">
+        <div class="compare-label">
+          <span>${r.age}歲開始（投資${r.years}年）</span>
+          <span class="num" style="font-weight:600; color:var(--dark)">${fmtFull(r.val)}</span>
+        </div>
+        <div class="bar-outer"><div class="bar-inner ${colors[i]}" style="width:${w}%"></div></div>
+      </div>`;
+  });
+}
+
+// ── PANEL 3: COST ──
+function calcCost() {
+  const trades   = +document.getElementById('t-trades').value   || 0;
+  const amount   = +document.getElementById('t-amount').value   || 50000;
+  const feeRate  = +document.getElementById('t-fee').value      || 0.07;
+  const etfScale = +document.getElementById('t-etf').value      || 500000;
+  const etfFee   = +document.getElementById('t-etffee').value   || 0.3;
+  const dividend = +document.getElementById('t-dividend').value || 0;
+
+  const monthlyFee = trades * amount * (feeRate/100);
+  const annualFeeBuy  = monthlyFee * 12;
+  const annualFeeSell = monthlyFee * 12;
+  const annualTax  = trades * amount * (0.1/100) * 12;
+  const annualEtf  = etfScale * (etfFee/100);
+  const annualHealth = dividend * 0.0211;
+  const total = annualFeeBuy + annualFeeSell + annualTax + annualEtf + annualHealth;
+
+  set('tc-fee-buy',  fmt(annualFeeBuy));
+  set('tc-fee-sell', fmt(annualFeeSell));
+  set('tc-tax',      fmt(annualTax));
+  set('tc-etf',      fmt(annualEtf));
+  set('tc-health',   fmt(annualHealth));
+  set('tc-total',    fmt(total));
+
+  // opportunity cost
+  const opp = calcFV(total, 0, 7, 30);
+  set('tc-opp', fmtFull(opp));
+
+  // saving from reducing trades to 1/mo
+  const reducedFee = 1 * amount * (feeRate/100) * 12 * 2;
+  const reducedTax = 1 * amount * (0.1/100) * 12;
+  const saved = (annualFeeBuy+annualFeeSell+annualTax) - reducedFee - reducedTax;
+  set('tc-save', fmt(Math.max(0,saved))+' / 年');
+
+  // ETF fee comparison
+  const monthly = +document.getElementById('t-monthly')?.value || 6000;
+  set('etf-monthly-ref', fmt(6000)+'/月');
+  const feeScenarios = [
+    {label:'超低費 0.1%', rate:0.1, cls:'bar-rose'},
+    {label:'低費 0.3%',   rate:0.3, cls:'bar-gold'},
+    {label:'中費 0.6%',   rate:0.6, cls:'bar-sage'},
+    {label:'高費 1.0%',   rate:1.0, cls:'bar-gray'},
+  ];
+  const etfBars = document.getElementById('etf-bars');
+  etfBars.innerHTML='';
+  const etfResults = feeScenarios.map(s=>({...s, val: calcFV(0, 6000, 7-s.rate, 30)}));
+  const maxEtf = etfResults[0].val;
+  etfResults.forEach(r=>{
+    const w=(r.val/maxEtf*100).toFixed(1);
+    etfBars.innerHTML+=`
+      <div class="compare-bar-wrap">
+        <div class="compare-label">
+          <span>${r.label}</span>
+          <span class="num" style="font-weight:600; color:var(--dark)">${fmtFull(r.val)}</span>
+        </div>
+        <div class="bar-outer"><div class="bar-inner ${r.cls}" style="width:${w}%"></div></div>
+      </div>`;
+  });
+}
+
+// ── PANEL 4: TAX ──
+// Taiwan income tax brackets 2024
+const brackets=[
+  {limit:560000,  rate:0.05, deduct:0},
+  {limit:1260000, rate:0.12, deduct:39200},
+  {limit:2520000, rate:0.20, deduct:140000},
+  {limit:4720000, rate:0.30, deduct:392000},
+  {limit:Infinity,rate:0.40, deduct:864000},
+];
+function calcIncomeTax(taxable) {
+  if(taxable<=0) return 0;
+  for(const b of brackets) {
+    if(taxable<=b.limit) return Math.max(0, taxable*b.rate - b.deduct);
+  }
+}
+
+function calcTax() {
+  const dividend = +document.getElementById('x-dividend').value || 0;
+  const income   = +document.getElementById('x-income').value   || 0;
+  const deduct   = +document.getElementById('x-deduct').value   || 250000;
+
+  // Method A: combined
+  const totalIncome = income + dividend;
+  const taxableA = Math.max(0, totalIncome - deduct);
+  const grossTaxA = calcIncomeTax(taxableA);
+  const credit = Math.min(dividend * 0.085, 80000);
+  const finalA = Math.max(0, grossTaxA - credit);
+
+  // Method B: separate 28%
+  const divTaxB = dividend * 0.28;
+  const taxableB = Math.max(0, income - deduct);
+  const otherTaxB = calcIncomeTax(taxableB);
+  const finalB = divTaxB + otherTaxB;
+
+  // Health
+  const health = dividend * 0.0211;
+
+  set('xa-income',   fmt(totalIncome));
+  set('xa-taxable',  fmt(taxableA));
+  set('xa-tax',      fmt(grossTaxA));
+  set('xa-credit',  '-'+fmt(credit));
+  set('xa-final',    fmt(finalA));
+
+  set('xb-div-tax',       fmt(divTaxB));
+  set('xb-other-taxable', fmt(taxableB));
+  set('xb-other-tax',     fmt(otherTaxB));
+  set('xb-final',         fmt(finalB));
+
+  set('x-health', fmt(health));
+
+  // verdict
+  const verdict = document.getElementById('tax-verdict');
+  const diff = Math.abs(finalA - finalB);
+  if(finalA < finalB) {
+    verdict.className='tax-verdict a';
+    set('tv-icon','✅');
+    set('tv-title','建議選【方案A：合併計稅】');
+    set('tv-save', fmt(diff));
+    set('tv-desc','比分離課稅省了這麼多，記得善用8.5%股利抵減額');
+  } else {
+    verdict.className='tax-verdict b';
+    set('tv-icon','✅');
+    set('tv-title','建議選【方案B：分離課稅28%】');
+    set('tv-save', fmt(diff));
+    set('tv-desc','你的所得稅率較高，分離課稅比合併計稅更划算');
+  }
+}
+
+// ── INIT ──
+calcCompound();
+calcCompare();
+calcCost();
+calcTax();
+</script>
+</body>
+</html>
